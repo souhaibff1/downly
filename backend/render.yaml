@@ -1,0 +1,10 @@
+services:
+  - type: web
+    name: downly-backend
+    env: docker
+    dockerfilePath: ./Dockerfile
+    plan: free
+    region: frankfurt
+    envVars:
+      - key: DEBUG
+        value: "false"
