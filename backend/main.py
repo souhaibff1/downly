@@ -544,10 +544,46 @@ def extract_formats(raw_formats: list[dict], duration: Optional[int] = None, pla
 
 # --- API Endpoints ---
 
-@app.get("/health")
+@app.api_route("/", methods=["GET", "HEAD"])
+async def root():
+    """Root endpoint for status and uptime monitors."""
+    return {"status": "ok", "app": "Downly API", "version": "1.1.0"}
+
+
+@app.api_route("/health", methods=["GET", "HEAD"])
 async def health_check():
-    """Health check endpoint."""
+    """Health check endpoint supporting both GET and HEAD for uptime monitors."""
     return {"status": "ok", "version": "1.1.0"}
+
+
+@app.get("/api/update/latest")
+async def get_latest_update(request: Request):
+    """Return latest app version metadata for in-app self-updater."""
+    base_url = str(request.base_url).rstrip("/")
+    return {
+        "version": "1.0.2",
+        "apk_url": f"{base_url}/api/download/latest-apk",
+        "notes": "Version 1.0.2: Standalone on-device engine (no server required), multi-strategy GitHub in-app updates, instant dismiss QuickShare, and stability fixes."
+    }
+
+
+@app.get("/api/download/latest-apk")
+async def download_latest_apk():
+    """Serve the latest release APK for in-app updating or direct web download."""
+    possible_paths = [
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "Downly.apk"),
+        os.path.join(DOWNLOADS_DIR, "Downly.apk"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Downly.apk"),
+        os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "app", "build", "outputs", "apk", "release", "app-release.apk"),
+    ]
+    for p in possible_paths:
+        if os.path.exists(p):
+            return FileResponse(
+                p,
+                media_type="application/vnd.android.package-archive",
+                filename="Downly-1.0.2.apk"
+            )
+    raise HTTPException(status_code=404, detail="APK not found on server")
 
 
 @app.get("/api/download/file/{filename}")
